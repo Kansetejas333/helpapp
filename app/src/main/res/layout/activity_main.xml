@@ -34,63 +34,13 @@
             android:text="Auto-accept ON"
             android:textSize="18sp" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Driver app package name (required)" />
-        <EditText
-            android:id="@+id/packageInput"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="e.g. com.example.driverapp"
-            android:inputType="text" />
+        <include
+            android:id="@+id/profile1"
+            layout="@layout/profile_section" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Accept button text (comma separated)" />
-        <EditText
-            android:id="@+id/labelsInput"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Accept"
-            android:inputType="text" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Accept button view ID (optional, faster)" />
-        <EditText
-            android:id="@+id/viewIdInput"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="e.g. com.example.driverapp:id/accept_btn"
-            android:inputType="text" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Minimum fare in ₹ (leave empty for no limit)" />
-        <EditText
-            android:id="@+id/minFareInput"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="numberDecimal" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Maximum pickup distance in km (leave empty for no limit)" />
-        <EditText
-            android:id="@+id/maxKmInput"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="numberDecimal" />
+        <include
+            android:id="@+id/profile2"
+            layout="@layout/profile_section" />
 
         <Button
             android:id="@+id/saveButton"
@@ -103,6 +53,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Fare and distance are read from the offer screen on a best-effort basis (first ₹ amount and first km/m value). If a value can't be read, that filter is skipped for the offer. Using auto-accept may break your driver app's terms of service." />
+            android:text="Fare and distance are read from the offer screen on a best-effort basis (first ₹ amount and first km/m value). If a value can't be read, that filter is skipped for the offer. Using auto-accept may break your driver apps' terms of service." />
     </LinearLayout>
 </ScrollView>

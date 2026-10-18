@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Switch
@@ -12,13 +13,18 @@ import android.widget.Toast
 
 class MainActivity : Activity() {
 
+    private class Fields(root: View) {
+        val title: TextView = root.findViewById(R.id.profileTitle)
+        val pkg: EditText = root.findViewById(R.id.packageInput)
+        val labels: EditText = root.findViewById(R.id.labelsInput)
+        val viewId: EditText = root.findViewById(R.id.viewIdInput)
+        val minFare: EditText = root.findViewById(R.id.minFareInput)
+        val maxKm: EditText = root.findViewById(R.id.maxKmInput)
+    }
+
     private lateinit var statusText: TextView
     private lateinit var enabledSwitch: Switch
-    private lateinit var packageInput: EditText
-    private lateinit var labelsInput: EditText
-    private lateinit var viewIdInput: EditText
-    private lateinit var minFareInput: EditText
-    private lateinit var maxKmInput: EditText
+    private val profiles = ArrayList<Fields>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,19 +32,23 @@ class MainActivity : Activity() {
 
         statusText = findViewById(R.id.statusText)
         enabledSwitch = findViewById(R.id.enabledSwitch)
-        packageInput = findViewById(R.id.packageInput)
-        labelsInput = findViewById(R.id.labelsInput)
-        viewIdInput = findViewById(R.id.viewIdInput)
-        minFareInput = findViewById(R.id.minFareInput)
-        maxKmInput = findViewById(R.id.maxKmInput)
 
         val p = AppSettings.prefs(this)
         enabledSwitch.isChecked = p.getBoolean(AppSettings.KEY_ENABLED, false)
-        packageInput.setText(p.getString(AppSettings.KEY_PACKAGE, ""))
-        labelsInput.setText(p.getString(AppSettings.KEY_LABELS, "Accept"))
-        viewIdInput.setText(p.getString(AppSettings.KEY_VIEW_ID, ""))
-        minFareInput.setText(p.getString(AppSettings.KEY_MIN_FARE, ""))
-        maxKmInput.setText(p.getString(AppSettings.KEY_MAX_KM, ""))
+
+        val sectionIds = listOf(R.id.profile1, R.id.profile2)
+        val titles = listOf("App 1 (for example Ola)", "App 2 (for example Uber)")
+        sectionIds.forEachIndexed { idx, id ->
+            val f = Fields(findViewById(id))
+            val n = idx + 1
+            f.title.text = titles[idx]
+            f.pkg.setText(p.getString(AppSettings.key(n, "package"), ""))
+            f.labels.setText(p.getString(AppSettings.key(n, "labels"), "Accept"))
+            f.viewId.setText(p.getString(AppSettings.key(n, "view_id"), ""))
+            f.minFare.setText(p.getString(AppSettings.key(n, "min_fare"), ""))
+            f.maxKm.setText(p.getString(AppSettings.key(n, "max_km"), ""))
+            profiles.add(f)
+        }
 
         enabledSwitch.setOnCheckedChangeListener { _, checked ->
             AppSettings.prefs(this).edit()
@@ -46,13 +56,16 @@ class MainActivity : Activity() {
         }
 
         findViewById<Button>(R.id.saveButton).setOnClickListener {
-            AppSettings.prefs(this).edit()
-                .putString(AppSettings.KEY_PACKAGE, packageInput.text.toString().trim())
-                .putString(AppSettings.KEY_LABELS, labelsInput.text.toString().trim())
-                .putString(AppSettings.KEY_VIEW_ID, viewIdInput.text.toString().trim())
-                .putString(AppSettings.KEY_MIN_FARE, minFareInput.text.toString().trim())
-                .putString(AppSettings.KEY_MAX_KM, maxKmInput.text.toString().trim())
-                .apply()
+            val e = AppSettings.prefs(this).edit()
+            profiles.forEachIndexed { idx, f ->
+                val n = idx + 1
+                e.putString(AppSettings.key(n, "package"), f.pkg.text.toString().trim())
+                e.putString(AppSettings.key(n, "labels"), f.labels.text.toString().trim())
+                e.putString(AppSettings.key(n, "view_id"), f.viewId.text.toString().trim())
+                e.putString(AppSettings.key(n, "min_fare"), f.minFare.text.toString().trim())
+                e.putString(AppSettings.key(n, "max_km"), f.maxKm.text.toString().trim())
+            }
+            e.apply()
             Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
         }
 

@@ -9,8 +9,8 @@ import android.view.accessibility.AccessibilityNodeInfo
 class AutoAcceptService : AccessibilityService(),
     SharedPreferences.OnSharedPreferenceChangeListener {
 
-    private var cfg = Config(false, "", emptyList(), "", 0.0, 0.0)
-    private var lastClickAt = 0L
+    private var cfg = Config(false, emptyList())
+    private val lastActionAt = HashMap<String, Long>()
 
     private val fareRegex = Regex("""₹\s*([0-9]+(?:\.[0-9]+)?)""")
     private val distanceRegex = Regex("""([0-9]+(?:\.[0-9]+)?)\s*(km|m)\b""", RegexOption.IGNORE_CASE)
@@ -28,55 +28,57 @@ class AutoAcceptService : AccessibilityService(),
 
     private fun reload() {
         cfg = AppSettings.load(this)
-        // Only listen to the chosen app. With no package set, listen to nothing.
+        // Only listen to the apps you configured. With none set, listen to nothing.
         val info = serviceInfo ?: return
-        info.packageNames = if (cfg.targetPackage.isNotEmpty())
-            arrayOf(cfg.targetPackage)
+        val pkgs = cfg.profiles.map { it.packageName }
+        info.packageNames = if (pkgs.isNotEmpty())
+            pkgs.toTypedArray()
         else
             arrayOf("com.tejas.rideautoaccept.none")
         serviceInfo = info
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null || !cfg.enabled || cfg.targetPackage.isEmpty()) return
-        if (event.packageName?.toString() != cfg.targetPackage) return
+        if (event == null || !cfg.enabled) return
+        val pkg = event.packageName?.toString() ?: return
+        val profile = cfg.profiles.firstOrNull { it.packageName == pkg } ?: return
 
         val now = SystemClock.elapsedRealtime()
-        if (now - lastClickAt < 1500) return
+        if (now - (lastActionAt[pkg] ?: 0L) < 1500) return
 
         val root = rootInActiveWindow ?: return
-        if (root.packageName?.toString() != cfg.targetPackage) return
+        if (root.packageName?.toString() != pkg) return
 
-        val button = findAcceptButton(root) ?: return
+        val button = findAcceptButton(root, profile) ?: return
 
-        if (!passesFilters(root)) {
-            lastClickAt = now
-            AppSettings.setStatus(this, "Offer skipped (did not match your rules)")
+        if (!passesFilters(root, profile)) {
+            lastActionAt[pkg] = now
+            AppSettings.setStatus(this, "[$pkg] Offer skipped (did not match your rules)")
             return
         }
 
         if (clickNode(button)) {
-            lastClickAt = now
-            AppSettings.setStatus(this, "Tapped Accept")
+            lastActionAt[pkg] = now
+            AppSettings.setStatus(this, "[$pkg] Tapped Accept")
         }
     }
 
-    private fun findAcceptButton(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        if (cfg.acceptViewId.isNotEmpty()) {
-            root.findAccessibilityNodeInfosByViewId(cfg.acceptViewId)
+    private fun findAcceptButton(root: AccessibilityNodeInfo, profile: AppProfile): AccessibilityNodeInfo? {
+        if (profile.acceptViewId.isNotEmpty()) {
+            root.findAccessibilityNodeInfosByViewId(profile.acceptViewId)
                 ?.firstOrNull()?.let { return it }
         }
-        for (label in cfg.acceptLabels) {
+        for (label in profile.acceptLabels) {
             root.findAccessibilityNodeInfosByText(label)
-                ?.firstOrNull { matchesLabel(it) }?.let { return it }
+                ?.firstOrNull { matchesLabel(it, profile) }?.let { return it }
         }
         return null
     }
 
-    private fun matchesLabel(node: AccessibilityNodeInfo): Boolean {
+    private fun matchesLabel(node: AccessibilityNodeInfo, profile: AppProfile): Boolean {
         val text = node.text?.toString()?.trim()
         val desc = node.contentDescription?.toString()?.trim()
-        return cfg.acceptLabels.any {
+        return profile.acceptLabels.any {
             it.equals(text, ignoreCase = true) || it.equals(desc, ignoreCase = true)
         }
     }
@@ -91,26 +93,26 @@ class AutoAcceptService : AccessibilityService(),
         return n?.performAction(AccessibilityNodeInfo.ACTION_CLICK) ?: false
     }
 
-    private fun passesFilters(root: AccessibilityNodeInfo): Boolean {
-        if (cfg.minFare <= 0.0 && cfg.maxPickupKm <= 0.0) return true
+    private fun passesFilters(root: AccessibilityNodeInfo, profile: AppProfile): Boolean {
+        if (profile.minFare <= 0.0 && profile.maxPickupKm <= 0.0) return true
 
         val sb = StringBuilder()
         collectText(root, sb, 0)
         val text = sb.toString()
 
-        if (cfg.minFare > 0.0) {
+        if (profile.minFare > 0.0) {
             val fare = fareRegex.find(text)?.groupValues?.get(1)?.toDoubleOrNull()
-            if (fare != null && fare < cfg.minFare) return false
+            if (fare != null && fare < profile.minFare) return false
         }
 
-        if (cfg.maxPickupKm > 0.0) {
+        if (profile.maxPickupKm > 0.0) {
             val match = distanceRegex.find(text)
             if (match != null) {
                 val value = match.groupValues[1].toDoubleOrNull()
                 val unit = match.groupValues[2].lowercase()
                 if (value != null) {
                     val km = if (unit == "m") value / 1000.0 else value
-                    if (km > cfg.maxPickupKm) return false
+                    if (km > profile.maxPickupKm) return false
                 }
             }
         }
