@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ride Auto Accept</string>
+    <string name="service_label">Ride Auto Accept</string>
+    <string name="service_description">Reads the ride-offer screen of the app you choose and taps the Accept button when the offer matches your rules. It does nothing in other apps and sends no data anywhere.</string>
+</resources>
